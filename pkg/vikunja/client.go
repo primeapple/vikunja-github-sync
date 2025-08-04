@@ -70,7 +70,7 @@ func (client VikunjaClient) CreateTask(projectId int, title string) error {
 }
 
 func (client VikunjaClient) request(method string, path string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", client.baseUrl, path), body)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/api/v1/%s", client.baseUrl, path), body)
 	if err != nil {
 		return nil, err
 	}
