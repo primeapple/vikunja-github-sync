@@ -12,6 +12,7 @@ It will create Vikunja Tasks for a GitHub issue under all the following conditio
 ## Setup
 
 You will need to set the following environment variables:
+- **GITHUB_TOKEN** - Your api token for GitHub, needs access to "All Repositories" and the `Issues` permission with "Read and Write" access
 - **VIKUNJA_TOKEN** - Your api token for vikunja, needs the `Other:User`, `Tasks:Create` and `Tasks:Read One` permissions
 - **VIKUNJA_URL** - The instance URL for vikunja
 
