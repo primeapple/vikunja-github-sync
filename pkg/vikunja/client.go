@@ -52,11 +52,12 @@ func (client VikunjaClient) GetDefaultProjectId() (*int, error) {
 }
 
 type PutTaskRequest struct {
-	Title string `json:"title"`
+	Description string `json:"description"`
+	Title       string `json:"title"`
 }
 
-func (client VikunjaClient) CreateTask(projectId int, title string) error {
-	reqBody := PutTaskRequest{Title: title}
+func (client VikunjaClient) CreateTask(projectId int, title string, description string) error {
+	reqBody := PutTaskRequest{Title: title, Description: description}
 	data, err := json.Marshal(reqBody)
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ func Sync() error {
 	}
 	fmt.Printf("Default project id: %d\n", *default_project_id)
 
-	err = vikunja.CreateTask(*default_project_id, "Created via API")
+	err = vikunja.CreateTask(*default_project_id, "Created via API", "Created by vikunja-github-sync")
 	if err != nil {
 		return err
 	}
