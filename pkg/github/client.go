@@ -6,18 +6,28 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
 type GithubClient struct {
-	token string
+	token   string
+	baseURL string
 }
 
 func NewClient() *GithubClient {
 	token := os.Getenv("GITHUB_TOKEN")
 
 	return &GithubClient{
-		token: token,
+		token:   token,
+		baseURL: "https://api.github.com",
+	}
+}
+
+func NewClientWithBaseURL(baseURL string) *GithubClient {
+	token := os.Getenv("GITHUB_TOKEN")
+
+	return &GithubClient{
+		token:   token,
+		baseURL: baseURL,
 	}
 }
 
@@ -31,7 +41,7 @@ type GetIssuesResponse struct {
 // see https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-issues-assigned-to-the-authenticated-user
 func (client GithubClient) GetAssignedOpenIssues() ([]GetIssuesResponse, error) {
 	var allIssues []GetIssuesResponse
-	url := "https://api.github.com/issues?state=open&filter=assigned&per_page=100"
+	url := client.baseURL + "/issues?state=open&filter=assigned&per_page=100"
 
 	for url != "" {
 		body, headers, err := client.request(http.MethodGet, url, nil)
@@ -50,22 +60,6 @@ func (client GithubClient) GetAssignedOpenIssues() ([]GetIssuesResponse, error) 
 	}
 
 	return allIssues, nil
-}
-
-func getNextPageUrl(linkHeader string) string {
-	if linkHeader == "" {
-		return ""
-	}
-
-	links := strings.SplitSeq(linkHeader, ",")
-	for link := range links {
-		parts := strings.Split(strings.TrimSpace(link), ";")
-		if len(parts) == 2 && strings.Contains(parts[1], `rel="next"`) {
-			url := strings.Trim(strings.TrimSpace(parts[0]), "<>")
-			return url
-		}
-	}
-	return ""
 }
 
 func (client GithubClient) request(method string, url string, body io.Reader) ([]byte, http.Header, error) {
