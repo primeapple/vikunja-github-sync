@@ -18,12 +18,13 @@ func Sync() error {
 	// if err != nil {
 	// 	return err
 	// }
+
 	github := github.NewClient()
 	issue_urls, err := github.GetAssignedOpenIssues()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Default project id: %v", issue_urls)
+	fmt.Printf("open issues: %v", issue_urls)
 
 	return nil
 }

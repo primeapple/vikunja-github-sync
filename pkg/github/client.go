@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type GithubClient struct {
@@ -20,58 +21,57 @@ func NewClient() *GithubClient {
 	}
 }
 
-type GetUserResponse struct {
-	Login string `json:"login"`
+type GetIssuesResponse struct {
+	Number     int `json:"number"`
+	Repository struct {
+		FullName string `json:"full_name"`
+	} `json:"repository"`
 }
 
-func (client GithubClient) getUsername() (string, error) {
-	body, err := client.request(http.MethodGet, "user", nil)
-	if err != nil {
-		return "", err
+// see https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-issues-assigned-to-the-authenticated-user
+func (client GithubClient) GetAssignedOpenIssues() ([]GetIssuesResponse, error) {
+	var allIssues []GetIssuesResponse
+	url := "https://api.github.com/issues?state=open&filter=assigned&per_page=100"
+
+	for url != "" {
+		body, headers, err := client.request(http.MethodGet, url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("Can't fetch assigned github issues: %w", err)
+		}
+
+		var resp []GetIssuesResponse
+		if err := json.Unmarshal(body, &resp); err != nil {
+			return nil, fmt.Errorf("Can't extract assigned github issues: %w", err)
+		}
+		allIssues = append(allIssues, resp...)
+
+		url = getNextPageUrl(headers.Get("Link"))
+		println(url)
 	}
 
-	var resp GetUserResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return "", err
-	}
-
-	return resp.Login, nil
+	return allIssues, nil
 }
 
-type SearchIssuesResponse struct {
-	Items []struct {
-		Url string `json:"url"`
-	} `json:"items"`
+func getNextPageUrl(linkHeader string) string {
+	if linkHeader == "" {
+		return ""
+	}
+
+	links := strings.SplitSeq(linkHeader, ",")
+	for link := range links {
+		parts := strings.Split(strings.TrimSpace(link), ";")
+		if len(parts) == 2 && strings.Contains(parts[1], `rel="next"`) {
+			url := strings.Trim(strings.TrimSpace(parts[0]), "<>")
+			return url
+		}
+	}
+	return ""
 }
 
-func (client GithubClient) GetAssignedOpenIssues() ([]string, error) {
-	username, err := client.getUsername()
+func (client GithubClient) request(method string, url string, body io.Reader) ([]byte, http.Header, error) {
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, err
-	}
-
-	body, err := client.request(http.MethodGet, fmt.Sprintf("search/issues?q=is:open+is:issue+assignee:%s&per_page=100", username), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp SearchIssuesResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, err
-	}
-
-	var assigned_issues_urls []string
-	for _, issue := range resp.Items {
-		assigned_issues_urls = append(assigned_issues_urls, issue.Url)
-	}
-
-	return assigned_issues_urls, nil
-}
-
-func (client GithubClient) request(method string, path string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequest(method, fmt.Sprintf("https://api.github.com/%s", path), body)
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", client.token))
@@ -83,18 +83,18 @@ func (client GithubClient) request(method string, path string, body io.Reader) (
 
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer response.Body.Close()
 
 	respBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if response.StatusCode >= 400 {
-		return nil, fmt.Errorf("Error in response, status %d, body %s, %v", response.StatusCode, string(respBody), *response)
+		return nil, nil, fmt.Errorf("Error in response, status %d, body %s, %v", response.StatusCode, string(respBody), *response)
 	}
 
-	return respBody, nil
+	return respBody, response.Header, nil
 }
