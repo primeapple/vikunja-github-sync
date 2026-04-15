@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primeapple/vikunja-github-sync/pkg/github"
+	"github.com/primeapple/vikunja-github-sync/pkg/utils"
 )
 
 func Sync() error {
@@ -20,11 +21,20 @@ func Sync() error {
 	// }
 
 	github := github.NewClient()
-	issue_urls, err := github.GetAssignedOpenIssues()
+	assignedOpenIssues, err := github.GetAssignedOpenIssues()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("open issues: %v", issue_urls)
+
+	todoist := todoist.NewClient()
+	openTasksWithGithubLabel, err := todoist.GetTasks("github")
+	if err != nil {
+		return err
+	}
+
+	openIssuesWithoutTasks := minus(
 
 	return nil
 }
+
+
